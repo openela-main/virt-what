@@ -1,0 +1,888 @@
+From 54c2ad4a764658ec8a9aadc52c749eabf1de73a0 Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Thu, 5 Jan 2023 12:34:02 +0000
+Subject: [PATCH] Detect OCI containers
+
+Podman using OCI containers sets container=oci in PID 1's environment.
+Detect that and print "oci" fact.
+
+This patch was originally contributed by Alessandro Valentini.  I
+modified it and added tests and documentation.
+
+Reported-by: Alessandro Valentini
+Fixes: https://bugzilla.redhat.com/show_bug.cgi?id=2155233
+---
+ configure.ac                          |   2 +
+ tests/oci/Makefile.am                 |  28 ++
+ tests/oci/proc/1/environ              | Bin 0 -> 124 bytes
+ tests/oci/proc/cpuinfo                | 671 ++++++++++++++++++++++++++
+ tests/oci/sbin/dmidecode              |   7 +
+ tests/oci/sbin/uname                  |   2 +
+ tests/oci/sbin/virt-what-cpuid-helper |   2 +
+ tests/oci/test.sh                     |  32 ++
+ virt-what.in                          |   6 +
+ virt-what.pod                         |   8 +-
+ 10 files changed, 757 insertions(+), 1 deletion(-)
+ create mode 100644 tests/oci/Makefile.am
+ create mode 100644 tests/oci/proc/1/environ
+ create mode 100644 tests/oci/proc/cpuinfo
+ create mode 100755 tests/oci/sbin/dmidecode
+ create mode 100755 tests/oci/sbin/uname
+ create mode 100755 tests/oci/sbin/virt-what-cpuid-helper
+ create mode 100755 tests/oci/test.sh
+
+diff --git a/configure.ac b/configure.ac
+index 8f808a38b..a80a4b6f0 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -56,6 +56,7 @@ tests="\
+ 	lx86 \
+ 	lxc \
+ 	nutanix-ahv \
++	oci \
+ 	parallels-desktop \
+ 	podman \
+ 	ppc64-baremetal \
+@@ -104,6 +105,7 @@ AC_CONFIG_FILES([Makefile
+ 	         tests/lx86/Makefile
+ 	         tests/lxc/Makefile
+ 	         tests/nutanix-ahv/Makefile
++	         tests/oci/Makefile
+ 	         tests/parallels-desktop/Makefile
+ 	         tests/podman/Makefile
+ 	         tests/ppc64-baremetal/Makefile
+diff --git a/tests/oci/Makefile.am b/tests/oci/Makefile.am
+new file mode 100644
+index 000000000..b2f6f2469
+--- /dev/null
++++ b/tests/oci/Makefile.am
+@@ -0,0 +1,28 @@
++# Makefile for virt-what
++# Copyright (C) 2008-2023 Red Hat Inc.
++#
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 2 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++
++CLEANFILES = *~
++
++TESTS = test.sh
++
++EXTRA_DIST = \
++	test.sh \
++	proc/1/environ \
++	proc/cpuinfo \
++	sbin/dmidecode \
++	sbin/uname \
++	sbin/virt-what-cpuid-helper
+diff --git a/tests/oci/proc/1/environ b/tests/oci/proc/1/environ
+new file mode 100644
+index 0000000000000000000000000000000000000000..03d40a45377eaeccef15532734d2f5b7fd42234e
+GIT binary patch
+literal 124
+zcmWG=4DqnlFD)+8&&f|t%+W7S%FMGu;={QJ39t}^3uH2cxCZ&!R+OX`<uWAa=anR8
+r=A{<d<|k(|c=-Fe+UghO=a&GP!6AN*KyGSUVw$0Wg<+zpc`5?{dKM{B
+
+literal 0
+HcmV?d00001
+
+diff --git a/tests/oci/proc/cpuinfo b/tests/oci/proc/cpuinfo
+new file mode 100644
+index 000000000..82b147bb4
+--- /dev/null
++++ b/tests/oci/proc/cpuinfo
+@@ -0,0 +1,671 @@
++processor	: 0
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 0
++cpu cores	: 12
++apicid		: 0
++initial apicid	: 0
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 1
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 1
++cpu cores	: 12
++apicid		: 2
++initial apicid	: 2
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 2
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 2
++cpu cores	: 12
++apicid		: 4
++initial apicid	: 4
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 3
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 4
++cpu cores	: 12
++apicid		: 8
++initial apicid	: 8
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 4
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 5
++cpu cores	: 12
++apicid		: 10
++initial apicid	: 10
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 5
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 6
++cpu cores	: 12
++apicid		: 12
++initial apicid	: 12
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 6
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2194.032
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 8
++cpu cores	: 12
++apicid		: 16
++initial apicid	: 16
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 7
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 9
++cpu cores	: 12
++apicid		: 18
++initial apicid	: 18
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 8
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 10
++cpu cores	: 12
++apicid		: 20
++initial apicid	: 20
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 9
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 12
++cpu cores	: 12
++apicid		: 24
++initial apicid	: 24
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 10
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 13
++cpu cores	: 12
++apicid		: 26
++initial apicid	: 26
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 11
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 14
++cpu cores	: 12
++apicid		: 28
++initial apicid	: 28
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 12
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2194.248
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 0
++cpu cores	: 12
++apicid		: 1
++initial apicid	: 1
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 13
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 3973.398
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 1
++cpu cores	: 12
++apicid		: 3
++initial apicid	: 3
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 14
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 2
++cpu cores	: 12
++apicid		: 5
++initial apicid	: 5
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 15
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 4
++cpu cores	: 12
++apicid		: 9
++initial apicid	: 9
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 16
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 5
++cpu cores	: 12
++apicid		: 11
++initial apicid	: 11
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 17
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 6
++cpu cores	: 12
++apicid		: 13
++initial apicid	: 13
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 18
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2195.748
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 8
++cpu cores	: 12
++apicid		: 17
++initial apicid	: 17
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 19
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 9
++cpu cores	: 12
++apicid		: 19
++initial apicid	: 19
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 20
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2196.733
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 10
++cpu cores	: 12
++apicid		: 21
++initial apicid	: 21
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 21
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 12
++cpu cores	: 12
++apicid		: 25
++initial apicid	: 25
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 22
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2200.000
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 13
++cpu cores	: 12
++apicid		: 27
++initial apicid	: 27
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
++
++processor	: 23
++vendor_id	: AuthenticAMD
++cpu family	: 23
++model		: 113
++model name	: AMD Ryzen 9 3900X 12-Core Processor
++stepping	: 0
++microcode	: 0x8701013
++cpu MHz		: 2194.867
++cache size	: 512 KB
++physical id	: 0
++siblings	: 24
++core id		: 14
++cpu cores	: 12
++apicid		: 29
++initial apicid	: 29
++fpu		: yes
++fpu_exception	: yes
++cpuid level	: 16
++wp		: yes
++flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca sev sev_es
++bugs		: sysret_ss_attrs spectre_v1 spectre_v2 spec_store_bypass retbleed
++bogomips	: 7585.66
++TLB size	: 3072 4K pages
++clflush size	: 64
++cache_alignment	: 64
++address sizes	: 43 bits physical, 48 bits virtual
++power management: ts ttp tm hwpstate cpb eff_freq_ro [13] [14]
+diff --git a/tests/oci/sbin/dmidecode b/tests/oci/sbin/dmidecode
+new file mode 100755
+index 000000000..48a6de126
+--- /dev/null
++++ b/tests/oci/sbin/dmidecode
+@@ -0,0 +1,7 @@
++#!/bin/sh -
++cat <<'EOF'
++# dmidecode 3.3
++Scanning /dev/mem for entry point.
++/dev/mem: No such file or directory
++EOF
++exit 1
+diff --git a/tests/oci/sbin/uname b/tests/oci/sbin/uname
+new file mode 100755
+index 000000000..ab0ec896d
+--- /dev/null
++++ b/tests/oci/sbin/uname
+@@ -0,0 +1,2 @@
++#!/bin/sh -
++echo x86_64
+diff --git a/tests/oci/sbin/virt-what-cpuid-helper b/tests/oci/sbin/virt-what-cpuid-helper
+new file mode 100755
+index 000000000..481e1e67c
+--- /dev/null
++++ b/tests/oci/sbin/virt-what-cpuid-helper
+@@ -0,0 +1,2 @@
++#!/bin/sh -
++# no output
+diff --git a/tests/oci/test.sh b/tests/oci/test.sh
+new file mode 100755
+index 000000000..5028ebc60
+--- /dev/null
++++ b/tests/oci/test.sh
+@@ -0,0 +1,32 @@
++# Test for OCI
++# Copyright (C) 2008-2023 Red Hat Inc.
++#
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 2 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++
++output="$(PATH=../..:$PATH virt-what --test-root=. 2>&1)"
++expected="oci"
++
++if [ "$output" != "$expected" ]; then
++    echo "$0: test failed because output did not match expected"
++    echo "Expected output was:"
++    echo "----------------------------------------"
++    echo "$expected"
++    echo "----------------------------------------"
++    echo "But the actual output of the program was:"
++    echo "----------------------------------------"
++    echo "$output"
++    echo "----------------------------------------"
++    exit 1
++fi
+diff --git a/virt-what.in b/virt-what.in
+index c6e4a1e00..102e23f67 100644
+--- a/virt-what.in
++++ b/virt-what.in
+@@ -192,6 +192,12 @@ if [ -f "${root}/.dockerenv" ] || [ -f "${root}/.dockerinit" ] || \
+     echo docker
+ fi
+ 
++# Check for OCI.
++if [ -e "${root}/proc/1/environ" ] &&
++    cat "${root}/proc/1/environ" | tr '\000' '\n' | grep -Eiq '^container=oci'; then
++    echo oci
++fi
++
+ # Check for Podman.
+ if [ -e "${root}/proc/1/environ" ] &&
+     cat "${root}/proc/1/environ" | tr '\000' '\n' | grep -Eiq '^container=podman'; then
+diff --git a/virt-what.pod b/virt-what.pod
+index 2c346bded..9dbc079f9 100644
+--- a/virt-what.pod
++++ b/virt-what.pod
+@@ -203,6 +203,12 @@ The guest is running inside Nutanix Acropolis Hypervisor (AHV).
+ 
+ Status: confirmed by RWMJ.
+ 
++=item B<oci>
++
++The guest is running in an OCI container.
++
++Status: contributed by Alessandro Valentini, confirmed by RWMJ
++
+ =item B<openvz>
+ 
+ The guest appears to be running inside an OpenVZ or Virtuozzo
+@@ -226,7 +232,7 @@ Status: contributed by Justin Clift
+ 
+ =item B<podman>
+ 
+-This is a Podman container.
++This is a Podman container.  (See also C<oci> above.)
+ 
+ Status: contributed by Jordan Webb
+ 
+-- 
+2.31.1
+
