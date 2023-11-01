@@ -1,0 +1,83 @@
+From 57966df6adddbebc4f4a6b9db7680d99344b0b1c Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Thu, 22 Dec 2022 10:34:03 +0000
+Subject: [PATCH] Move docker and podman tests up, add comments
+
+Refactor to bring related tests closer together and make the comments
+more uniform.
+---
+ virt-what.in | 31 +++++++++++++++----------------
+ 1 file changed, 15 insertions(+), 16 deletions(-)
+
+diff --git a/virt-what.in b/virt-what.in
+index 170bc24ab..c6e4a1e00 100644
+--- a/virt-what.in
++++ b/virt-what.in
+@@ -165,7 +165,6 @@ fi
+ # /proc/vz - always exists if OpenVZ kernel is running (inside and outside
+ # container)
+ # /proc/bc - exists on node, but not inside container.
+-
+ if [ -d "${root}/proc/vz" -a ! -d "${root}/proc/bc" ]; then
+     echo openvz
+ fi
+@@ -173,13 +172,13 @@ fi
+ # Check for LXC containers
+ # http://www.freedesktop.org/wiki/Software/systemd/ContainerInterface
+ # Added by Marc Fournier
+-
+ if [ -e "${root}/proc/1/environ" ] &&
+     tr '\000' '\n' < "${root}/proc/1/environ" |
+         grep -Eiq '^container=lxc'; then
+     echo lxc
+ fi
+ 
++# Check for Illumos LX
+ if [ -e "${root}/proc/1/environ" ] &&
+     tr '\0' '\n' < "${root}/proc/1/environ" | grep -q '^container=zone$' &&
+     [ -e "${root}/proc/version" ] &&
+@@ -187,6 +186,20 @@ if [ -e "${root}/proc/1/environ" ] &&
+     echo illumos-lx
+ fi
+ 
++# Check for Docker.
++if [ -f "${root}/.dockerenv" ] || [ -f "${root}/.dockerinit" ] || \
++   grep -qF /docker/ "${root}/proc/self/cgroup" 2>/dev/null; then
++    echo docker
++fi
++
++# Check for Podman.
++if [ -e "${root}/proc/1/environ" ] &&
++    cat "${root}/proc/1/environ" | tr '\000' '\n' | grep -Eiq '^container=podman'; then
++    echo podman
++elif grep -qF /libpod- "${root}/proc/self/cgroup" 2>/dev/null; then
++    echo podman
++fi
++
+ # Check for Linux-VServer
+ if test -e "${root}/proc/self/status" \
+    && cat "${root}/proc/self/status" | grep -q "VxID: [0-9]*"; then
+@@ -381,20 +394,6 @@ if ! "$skip_lkvm"; then
+     fi
+ fi
+ 
+-# Check for Docker.
+-if [ -f "${root}/.dockerenv" ] || [ -f "${root}/.dockerinit" ] || \
+-   grep -qF /docker/ "${root}/proc/self/cgroup" 2>/dev/null; then
+-    echo docker
+-fi
+-
+-# Check for Podman.
+-if [ -e "${root}/proc/1/environ" ] &&
+-    cat "${root}/proc/1/environ" | tr '\000' '\n' | grep -Eiq '^container=podman'; then
+-    echo podman
+-elif grep -qF /libpod- "${root}/proc/self/cgroup" 2>/dev/null; then
+-    echo podman
+-fi
+-
+ # Check ppc64 lpar, kvm or powerkvm
+ 
+ # example /proc/cpuinfo line indicating 'not baremetal'
+-- 
+2.31.1
+
