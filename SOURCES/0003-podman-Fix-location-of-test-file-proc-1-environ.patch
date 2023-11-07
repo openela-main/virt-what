@@ -1,0 +1,36 @@
+From 1cbcbb801c86f8f791ecd930c4ac311f034e3e1a Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Thu, 5 Jan 2023 12:48:55 +0000
+Subject: [PATCH] podman: Fix location of test file /proc/1/environ
+
+Since it was at the wrong location, the file was not even used by the
+test.
+
+Fixes: commit 1df728aa4b ("Add podman support")
+---
+ tests/podman/Makefile.am          |   2 +-
+ tests/podman/{ => proc}/1/environ | Bin
+ 2 files changed, 1 insertion(+), 1 deletion(-)
+ rename tests/podman/{ => proc}/1/environ (100%)
+
+diff --git a/tests/podman/Makefile.am b/tests/podman/Makefile.am
+index 2962f3237..1745ef6c6 100644
+--- a/tests/podman/Makefile.am
++++ b/tests/podman/Makefile.am
+@@ -20,8 +20,8 @@ CLEANFILES = *~
+ TESTS = test.sh
+ 
+ EXTRA_DIST = \
+-	1/environ \
+ 	test.sh \
++	proc/1/environ \
+ 	proc/cpuinfo \
+ 	proc/self/cgroup \
+ 	proc/self/status \
+diff --git a/tests/podman/1/environ b/tests/podman/proc/1/environ
+similarity index 100%
+rename from tests/podman/1/environ
+rename to tests/podman/proc/1/environ
+-- 
+2.39.1
+
