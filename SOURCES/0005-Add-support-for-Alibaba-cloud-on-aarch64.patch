@@ -1,0 +1,371 @@
+From 04b504c47e0dc43c82b0d413a253d0599ce83321 Mon Sep 17 00:00:00 2001
+From: Yongkui Guo <yoguo@redhat.com>
+Date: Mon, 30 Jan 2023 18:20:32 +0800
+Subject: [PATCH] Add support for Alibaba cloud on aarch64
+
+This assumes you are running RHEL or another tenant which supports
+ACPI.  It probably won't work for guests using device tree.
+
+Also we assume that the hypervisor is KVM.  Since the hypervisor
+indicates that it is RHEL 7, this is very likely to be true, but hard
+to prove since there is no CPUID on Arm.
+
+Fixes: https://bugzilla.redhat.com/show_bug.cgi?id=2165285
+(cherry picked from commit 805604762468b754ea60e5dc176fa26f68d211b8)
+---
+ configure.ac                                  |   2 +
+ tests/alibaba-cloud-arm/Makefile.am           |  28 +++++
+ tests/alibaba-cloud-arm/proc/cpuinfo          |  18 +++
+ tests/alibaba-cloud-arm/proc/self/status      |  57 +++++++++
+ tests/alibaba-cloud-arm/sbin/dmidecode        | 116 ++++++++++++++++++
+ tests/alibaba-cloud-arm/sbin/uname            |   2 +
+ .../sbin/virt-what-cpuid-helper               |   3 +
+ tests/alibaba-cloud-arm/test.sh               |  33 +++++
+ virt-what.in                                  |   5 +
+ 9 files changed, 264 insertions(+)
+ create mode 100644 tests/alibaba-cloud-arm/Makefile.am
+ create mode 100644 tests/alibaba-cloud-arm/proc/cpuinfo
+ create mode 100644 tests/alibaba-cloud-arm/proc/self/status
+ create mode 100755 tests/alibaba-cloud-arm/sbin/dmidecode
+ create mode 100755 tests/alibaba-cloud-arm/sbin/uname
+ create mode 100755 tests/alibaba-cloud-arm/sbin/virt-what-cpuid-helper
+ create mode 100755 tests/alibaba-cloud-arm/test.sh
+
+diff --git a/configure.ac b/configure.ac
+index a80a4b6f0..cfb7ca371 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -34,6 +34,7 @@ AM_CONDITIONAL([HOST_CPU_IA64], [ test "x$host_cpu" = "xia64" ])
+ 
+ dnl List of tests.
+ tests="\
++	alibaba-cloud-arm \
+ 	alibaba-cloud-x86 \
+ 	aws-baremetal-x86 \
+ 	aws-kvm-arm \
+@@ -83,6 +84,7 @@ AC_CONFIG_HEADERS([config.h])
+ AC_CONFIG_FILES([virt-what],[chmod +x virt-what])
+ AC_CONFIG_FILES([Makefile
+                  tests/Makefile
++                 tests/alibaba-cloud-arm/Makefile
+                  tests/alibaba-cloud-x86/Makefile
+ 	         tests/aws-baremetal-x86/Makefile
+ 	         tests/aws-kvm-arm/Makefile
+diff --git a/tests/alibaba-cloud-arm/Makefile.am b/tests/alibaba-cloud-arm/Makefile.am
+new file mode 100644
+index 000000000..09ce07861
+--- /dev/null
++++ b/tests/alibaba-cloud-arm/Makefile.am
+@@ -0,0 +1,28 @@
++# Makefile for virt-what
++# Copyright (C) 2008-2023 Red Hat Inc.
++#
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 2 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++
++CLEANFILES = *~
++
++TESTS = test.sh
++
++EXTRA_DIST = \
++	test.sh \
++	proc/cpuinfo \
++	proc/self/status \
++	sbin/dmidecode \
++	sbin/uname \
++	sbin/virt-what-cpuid-helper
+diff --git a/tests/alibaba-cloud-arm/proc/cpuinfo b/tests/alibaba-cloud-arm/proc/cpuinfo
+new file mode 100644
+index 000000000..03dbb22ab
+--- /dev/null
++++ b/tests/alibaba-cloud-arm/proc/cpuinfo
+@@ -0,0 +1,18 @@
++processor	: 0
++BogoMIPS	: 50.00
++Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp ssbs
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x3
++CPU part	: 0xd0c
++CPU revision	: 1
++
++processor	: 1
++BogoMIPS	: 50.00
++Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp ssbs
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x3
++CPU part	: 0xd0c
++CPU revision	: 1
++
+diff --git a/tests/alibaba-cloud-arm/proc/self/status b/tests/alibaba-cloud-arm/proc/self/status
+new file mode 100644
+index 000000000..08c63e9cb
+--- /dev/null
++++ b/tests/alibaba-cloud-arm/proc/self/status
+@@ -0,0 +1,57 @@
++Name:	cat
++Umask:	0022
++State:	R (running)
++Tgid:	6341
++Ngid:	0
++Pid:	6341
++PPid:	1588
++TracerPid:	0
++Uid:	0	0	0	0
++Gid:	0	0	0	0
++FDSize:	256
++Groups:	0 
++NStgid:	6341
++NSpid:	6341
++NSpgid:	6341
++NSsid:	1588
++VmPeak:	    2352 kB
++VmSize:	    2352 kB
++VmLck:	       0 kB
++VmPin:	       0 kB
++VmHWM:	     768 kB
++VmRSS:	     768 kB
++RssAnon:	      80 kB
++RssFile:	     688 kB
++RssShmem:	       0 kB
++VmData:	     348 kB
++VmStk:	     132 kB
++VmExe:	      24 kB
++VmLib:	    1728 kB
++VmPTE:	      44 kB
++VmSwap:	       0 kB
++HugetlbPages:	       0 kB
++CoreDumping:	0
++THP_enabled:	1
++Threads:	1
++SigQ:	0/29002
++SigPnd:	0000000000000000
++ShdPnd:	0000000000000000
++SigBlk:	0000000000000000
++SigIgn:	0000000000000000
++SigCgt:	0000000000000000
++CapInh:	0000000000000000
++CapPrm:	000001ffffffffff
++CapEff:	000001ffffffffff
++CapBnd:	000001ffffffffff
++CapAmb:	0000000000000000
++NoNewPrivs:	0
++Seccomp:	0
++Seccomp_filters:	0
++Speculation_Store_Bypass:	thread vulnerable
++SpeculationIndirectBranch:	unknown
++Cpus_allowed:	3
++Cpus_allowed_list:	0-1
++Mems_allowed:	00000000,00000001
++Mems_allowed_list:	0
++voluntary_ctxt_switches:	0
++nonvoluntary_ctxt_switches:	0
+diff --git a/tests/alibaba-cloud-arm/sbin/dmidecode b/tests/alibaba-cloud-arm/sbin/dmidecode
+new file mode 100755
+index 000000000..89fa9a34b
+--- /dev/null
++++ b/tests/alibaba-cloud-arm/sbin/dmidecode
+@@ -0,0 +1,116 @@
++#!/bin/sh -
++cat <<'EOF'
++# dmidecode 3.3
++Getting SMBIOS data from sysfs.
++SMBIOS 3.0.0 present.
++Table at 0x2348C0000.
++
++Handle 0x0100, DMI type 1, 27 bytes
++System Information
++	Manufacturer: Alibaba Cloud
++	Product Name: Alibaba Cloud ECS
++	Version: virt-rhel7.6.0
++	Serial Number: 8c43355a-242e-42c2-bdf7-9fae99316221
++	UUID: 8c43355a-242e-42c2-bdf7-9fae99316221
++	Wake-up Type: Power Switch
++	SKU Number: Not Specified
++	Family: Red Hat Enterprise Linux
++
++Handle 0x0300, DMI type 3, 21 bytes
++Chassis Information
++	Manufacturer: Alibaba Cloud
++	Type: Other
++	Lock: Not Present
++	Version: virt-rhel7.6.0
++	Serial Number: Not Specified
++	Asset Tag: Not Specified
++	Boot-up State: Safe
++	Power Supply State: Safe
++	Thermal State: Safe
++	Security Status: Unknown
++	OEM Information: 0x00000000
++	Height: Unspecified
++	Number Of Power Cords: Unspecified
++	Contained Elements: 0
++
++Handle 0x0400, DMI type 4, 42 bytes
++Processor Information
++	Socket Designation: CPU 0
++	Type: Central Processor
++	Family: Other
++	Manufacturer: Alibaba Cloud
++	ID: 00 00 00 00 00 00 00 00
++	Version: virt-rhel7.6.0
++	Voltage: Unknown
++	External Clock: Unknown
++	Max Speed: 2000 MHz
++	Current Speed: 2000 MHz
++	Status: Populated, Enabled
++	Upgrade: Other
++	L1 Cache Handle: Not Provided
++	L2 Cache Handle: Not Provided
++	L3 Cache Handle: Not Provided
++	Serial Number: Not Specified
++	Asset Tag: Not Specified
++	Part Number: Not Specified
++	Core Count: 2
++	Core Enabled: 2
++	Thread Count: 1
++	Characteristics: None
++
++Handle 0x1000, DMI type 16, 23 bytes
++Physical Memory Array
++	Location: Other
++	Use: System Memory
++	Error Correction Type: Multi-bit ECC
++	Maximum Capacity: 8 GB
++	Error Information Handle: Not Provided
++	Number Of Devices: 1
++
++Handle 0x1100, DMI type 17, 40 bytes
++Memory Device
++	Array Handle: 0x1000
++	Error Information Handle: Not Provided
++	Total Width: Unknown
++	Data Width: Unknown
++	Size: 8 GB
++	Form Factor: DIMM
++	Set: None
++	Locator: DIMM 0
++	Bank Locator: Not Specified
++	Type: RAM
++	Type Detail: Other
++	Speed: Unknown
++	Manufacturer: Alibaba Cloud
++	Serial Number: Not Specified
++	Asset Tag: Not Specified
++	Part Number: Not Specified
++	Rank: Unknown
++	Configured Memory Speed: Unknown
++	Minimum Voltage: Unknown
++	Maximum Voltage: Unknown
++	Configured Voltage: Unknown
++
++Handle 0x2000, DMI type 32, 11 bytes
++System Boot Information
++	Status: No errors detected
++
++Handle 0x0000, DMI type 0, 26 bytes
++BIOS Information
++	Vendor: EFI Development Kit II / OVMF
++	Version: 0.0.0
++	Release Date: 02/06/2015
++	Address: 0xE8000
++	Runtime Size: 96 kB
++	ROM Size: 64 kB
++	Characteristics:
++		BIOS characteristics not supported
++		Targeted content distribution is supported
++		UEFI is supported
++		System is a virtual machine
++	BIOS Revision: 0.0
++
++Handle 0xFEFF, DMI type 127, 4 bytes
++End Of Table
++
++EOF
+diff --git a/tests/alibaba-cloud-arm/sbin/uname b/tests/alibaba-cloud-arm/sbin/uname
+new file mode 100755
+index 000000000..bd33a2d73
+--- /dev/null
++++ b/tests/alibaba-cloud-arm/sbin/uname
+@@ -0,0 +1,2 @@
++#!/bin/sh -
++echo aarch64
+diff --git a/tests/alibaba-cloud-arm/sbin/virt-what-cpuid-helper b/tests/alibaba-cloud-arm/sbin/virt-what-cpuid-helper
+new file mode 100755
+index 000000000..08e293436
+--- /dev/null
++++ b/tests/alibaba-cloud-arm/sbin/virt-what-cpuid-helper
+@@ -0,0 +1,3 @@
++#!/bin/sh -
++# Arm, so no cpuid.
++# No output, exits with 0.
+diff --git a/tests/alibaba-cloud-arm/test.sh b/tests/alibaba-cloud-arm/test.sh
+new file mode 100755
+index 000000000..1e7360931
+--- /dev/null
++++ b/tests/alibaba-cloud-arm/test.sh
+@@ -0,0 +1,33 @@
++# Test for Alibaba Cloud
++# Copyright (C) 2018-2023 Red Hat Inc.
++#
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 2 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++
++output="$(PATH=../..:$PATH virt-what --test-root=. 2>&1)"
++expected="alibaba_cloud
++kvm"
++
++if [ "$output" != "$expected" ]; then
++    echo "$0: test failed because output did not match expected"
++    echo "Expected output was:"
++    echo "----------------------------------------"
++    echo "$expected"
++    echo "----------------------------------------"
++    echo "But the actual output of the program was:"
++    echo "----------------------------------------"
++    echo "$output"
++    echo "----------------------------------------"
++    exit 1
++fi
+diff --git a/virt-what.in b/virt-what.in
+index 102e23f67..fbf8c54c5 100644
+--- a/virt-what.in
++++ b/virt-what.in
+@@ -354,6 +354,11 @@ if ! "$skip_qemu_kvm"; then
+         # This is for AWS Graviton (Arm) systems which don't have CPUID.
+         echo kvm
+         skip_lkvm=true
++    elif echo "$dmi" | grep -q 'Manufacturer: Alibaba Cloud' &&
++        echo "$dmi" | grep -q 'System is a virtual machine'; then
++        # This is for Alibaba Arm systems which don't have CPUID.
++        echo kvm
++        skip_lkvm=true
+     elif echo "$dmi" | grep -q 'Manufacturer: QEMU'; then
+         # The test for KVM above failed, so now we know we're
+         # not using KVM acceleration.
+-- 
+2.39.1
+
