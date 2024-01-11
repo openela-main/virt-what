@@ -8,7 +8,7 @@ set -e
 #   ./copy-patches.sh
 
 project=virt-what
-rhel_version=9.2
+rhel_version=9.3
 
 # Check we're in the right directory.
 if [ ! -f $project.spec ]; then

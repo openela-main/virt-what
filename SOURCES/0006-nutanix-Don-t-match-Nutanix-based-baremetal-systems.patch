@@ -1,0 +1,38 @@
+From 5f10aff9e4b06fb07eb09411d58ee8c8209ff477 Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Wed, 7 Jun 2023 10:10:03 +0100
+Subject: [PATCH] nutanix: Don't match Nutanix-based baremetal systems
+
+Nutanix ship baremetal systems which have modified firmware that
+reports similar to:
+
+  Manufacturer: Nutanix
+  Product Name: NX-T00-4NL3-G5
+
+This is not a virtual machine, but was recognised as such.  Make sure
+we match on 'Product Name: AHV' to identify only virtual machines.
+
+Thanks: Scott Yeager, Shaoyu Shang
+Fixes: https://bugzilla.redhat.com/show_bug.cgi?id=2211980
+(cherry picked from commit eeb7d8a1e7c73fc9c5b4e987d92a04136d61b07d)
+---
+ virt-what.in | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/virt-what.in b/virt-what.in
+index fbf8c54c5..e310f339b 100644
+--- a/virt-what.in
++++ b/virt-what.in
+@@ -259,7 +259,8 @@ if echo "$dmi" | grep -q 'Vendor: Parallels'; then
+ fi
+ 
+ # Check for Nutanix AHV.
+-if echo "$dmi" | grep -q 'Manufacturer: Nutanix'; then
++if echo "$dmi" | grep -q 'Manufacturer: Nutanix' &&
++   echo "$dmi" | grep -q 'Product Name: AHV'; then
+     echo nutanix_ahv
+ fi
+ 
+-- 
+2.39.1
+

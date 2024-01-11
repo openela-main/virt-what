@@ -1,6 +1,6 @@
 Name:           virt-what
 Version:        1.25
-Release:        3%{?dist}
+Release:        5%{?dist}
 Summary:        Detect if we are running in a virtual machine
 License:        GPLv2+
 
@@ -11,7 +11,7 @@ Source0:        http://people.redhat.com/~rjones/virt-what/files/%{name}-%{versi
 Source1:       copy-patches.sh
 
 # Patches are maintained in the following repository:
-# http://git.annexia.org/?p=virt-what.git;a=shortlog;h=refs/heads/rhel-9.2
+# http://git.annexia.org/?p=virt-what.git;a=shortlog;h=refs/heads/rhel-9.3
 
 # Patches.
 Patch0001:     0001-Rearrange-lxc-test-to-avoid-use-of-cat.patch
@@ -19,6 +19,8 @@ Patch0002:     0002-Move-docker-and-podman-tests-up-add-comments.patch
 Patch0003:     0003-podman-Fix-location-of-test-file-proc-1-environ.patch
 Patch0004:     0004-Detect-OCI-containers.patch
 Patch0005:     0005-Add-support-for-Alibaba-cloud-on-aarch64.patch
+Patch0006:     0006-nutanix-Don-t-match-Nutanix-based-baremetal-systems.patch
+Patch0007:     0007-Add-support-for-CRI-O-containers.patch
 
 BuildRequires:  make
 BuildRequires:  git
@@ -125,6 +127,14 @@ fi
 
 
 %changelog
+* Wed Jun 28 2023 Richard W.M. Jones <rjones@redhat.com> - 1.25-5
+- Add support for CRI-O containers
+  resolves: rhbz#2218203
+
+* Thu Jun 08 2023 Richard W.M. Jones <rjones@redhat.com> - 1.25-4
+- Don't match Nutanix-based baremetal systems
+  resolves: rhbz#2211980
+
 * Mon Jan 30 2023 Richard W.M. Jones <rjones@redhat.com> - 1.25-3
 - Add support for Alibaba Cloud on aarch64
   resolves: rhbz#2165285

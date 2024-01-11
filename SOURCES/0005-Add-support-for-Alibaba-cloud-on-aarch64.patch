@@ -367,5 +367,5 @@ index 102e23f67..fbf8c54c5 100644
          # The test for KVM above failed, so now we know we're
          # not using KVM acceleration.
 -- 
-2.31.1
+2.39.1
 
