@@ -1,0 +1,27 @@
+From a29d4a5632ff9f60f939e4f0f36ce97ed43c5650 Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Thu, 22 Dec 2022 10:31:47 +0000
+Subject: [PATCH] Rearrange lxc test to avoid use of cat
+
+Thanks: Elias Probst <e.probst@ssc-services.de>
+---
+ virt-what.in | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/virt-what.in b/virt-what.in
+index d090898e5..170bc24ab 100644
+--- a/virt-what.in
++++ b/virt-what.in
+@@ -175,7 +175,8 @@ fi
+ # Added by Marc Fournier
+ 
+ if [ -e "${root}/proc/1/environ" ] &&
+-    cat "${root}/proc/1/environ" | tr '\000' '\n' | grep -Eiq '^container=lxc'; then
++    tr '\000' '\n' < "${root}/proc/1/environ" |
++        grep -Eiq '^container=lxc'; then
+     echo lxc
+ fi
+ 
+-- 
+2.31.1
+
