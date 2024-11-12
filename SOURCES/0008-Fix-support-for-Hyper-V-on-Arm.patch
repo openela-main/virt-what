@@ -1,0 +1,494 @@
+From 128d73c47ef90ca871966a5417962836f9f359f1 Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Tue, 2 Jul 2024 08:45:10 +0000
+Subject: [PATCH] Fix support for Hyper-V on Arm
+
+This architecture lacks CPUID so we must fall back to looking
+at DMI data instead.
+
+Reported-by: Yuxin Sun
+Thanks: Dan Berrange
+Fixes: https://issues.redhat.com/browse/RHEL-45834
+(cherry picked from commit 49a17ec8438d01280750d52ae661c8c5c9fe9d07)
+---
+ configure.ac                                 |   2 +
+ tests/hyperv-arm/Makefile.am                 |  28 +++
+ tests/hyperv-arm/proc/cpuinfo                |  18 ++
+ tests/hyperv-arm/proc/self/status            |  57 +++++
+ tests/hyperv-arm/sbin/dmidecode              | 221 +++++++++++++++++++
+ tests/hyperv-arm/sbin/uname                  |   2 +
+ tests/hyperv-arm/sbin/virt-what-cpuid-helper |   2 +
+ tests/hyperv-arm/test.sh                     |  32 +++
+ virt-what.in                                 |  16 +-
+ 9 files changed, 374 insertions(+), 4 deletions(-)
+ create mode 100644 tests/hyperv-arm/Makefile.am
+ create mode 100644 tests/hyperv-arm/proc/cpuinfo
+ create mode 100644 tests/hyperv-arm/proc/self/status
+ create mode 100755 tests/hyperv-arm/sbin/dmidecode
+ create mode 100755 tests/hyperv-arm/sbin/uname
+ create mode 100755 tests/hyperv-arm/sbin/virt-what-cpuid-helper
+ create mode 100755 tests/hyperv-arm/test.sh
+
+diff --git a/configure.ac b/configure.ac
+index 632e25e91..4dd2c9731 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -48,6 +48,7 @@ tests="\
+ 	esx4.1 \
+ 	google-cloud \
+ 	hyperv \
++	hyperv-arm \
+ 	illumos-lx \
+ 	kvm \
+ 	kvm-explicit-cpu \
+@@ -99,6 +100,7 @@ AC_CONFIG_FILES([Makefile
+ 	         tests/esx4.1/Makefile
+ 		 tests/google-cloud/Makefile
+ 	         tests/hyperv/Makefile
++	         tests/hyperv-arm/Makefile
+ 	         tests/illumos-lx/Makefile
+ 	         tests/kvm/Makefile
+ 	         tests/kvm-explicit-cpu/Makefile
+diff --git a/tests/hyperv-arm/Makefile.am b/tests/hyperv-arm/Makefile.am
+new file mode 100644
+index 000000000..b748df8bc
+--- /dev/null
++++ b/tests/hyperv-arm/Makefile.am
+@@ -0,0 +1,28 @@
++# Makefile for virt-what
++# Copyright (C) 2008-2011 Red Hat Inc.
++#
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 2 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++
++CLEANFILES = *~
++
++TESTS = test.sh
++
++EXTRA_DIST = \
++	test.sh \
++	proc/cpuinfo \
++	proc/self/status \
++	sbin/dmidecode \
++	sbin/uname \
++	sbin/virt-what-cpuid-helper
+diff --git a/tests/hyperv-arm/proc/cpuinfo b/tests/hyperv-arm/proc/cpuinfo
+new file mode 100644
+index 000000000..c492a0024
+--- /dev/null
++++ b/tests/hyperv-arm/proc/cpuinfo
+@@ -0,0 +1,18 @@
++processor	: 0
++BogoMIPS	: 50.00
++Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x3
++CPU part	: 0xd0c
++CPU revision	: 1
++
++processor	: 1
++BogoMIPS	: 50.00
++Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x3
++CPU part	: 0xd0c
++CPU revision	: 1
++
+diff --git a/tests/hyperv-arm/proc/self/status b/tests/hyperv-arm/proc/self/status
+new file mode 100644
+index 000000000..129e9c2aa
+--- /dev/null
++++ b/tests/hyperv-arm/proc/self/status
+@@ -0,0 +1,57 @@
++Name:	cat
++Umask:	0022
++State:	R (running)
++Tgid:	17916
++Ngid:	0
++Pid:	17916
++PPid:	5880
++TracerPid:	0
++Uid:	1000	1000	1000	1000
++Gid:	1000	1000	1000	1000
++FDSize:	256
++Groups:	4 190 1000 
++NStgid:	17916
++NSpid:	17916
++NSpgid:	17916
++NSsid:	5880
++VmPeak:	    5284 kB
++VmSize:	    5284 kB
++VmLck:	       0 kB
++VmPin:	       0 kB
++VmHWM:	     772 kB
++VmRSS:	     772 kB
++RssAnon:	      80 kB
++RssFile:	     692 kB
++RssShmem:	       0 kB
++VmData:	     344 kB
++VmStk:	     132 kB
++VmExe:	      24 kB
++VmLib:	    1736 kB
++VmPTE:	      48 kB
++VmSwap:	       0 kB
++HugetlbPages:	       0 kB
++CoreDumping:	0
++THP_enabled:	1
++Threads:	1
++SigQ:	0/30549
++SigPnd:	0000000000000000
++ShdPnd:	0000000000000000
++SigBlk:	0000000000000000
++SigIgn:	0000000000000000
++SigCgt:	0000000000000000
++CapInh:	0000000000000000
++CapPrm:	0000000000000000
++CapEff:	0000000000000000
++CapBnd:	000001ffffffffff
++CapAmb:	0000000000000000
++NoNewPrivs:	0
++Seccomp:	0
++Seccomp_filters:	0
++Speculation_Store_Bypass:	not vulnerable
++SpeculationIndirectBranch:	unknown
++Cpus_allowed:	3
++Cpus_allowed_list:	0-1
++Mems_allowed:	00000000,00000001
++Mems_allowed_list:	0
++voluntary_ctxt_switches:	0
++nonvoluntary_ctxt_switches:	0
+diff --git a/tests/hyperv-arm/sbin/dmidecode b/tests/hyperv-arm/sbin/dmidecode
+new file mode 100755
+index 000000000..38ac3feac
+--- /dev/null
++++ b/tests/hyperv-arm/sbin/dmidecode
+@@ -0,0 +1,221 @@
++#!/bin/sh -
++cat <<'EOF'
++# dmidecode 3.3
++Getting SMBIOS data from sysfs.
++SMBIOS 3.1.0 present.
++Table at 0x3FD63000.
++
++Handle 0x0000, DMI type 0, 26 bytes
++BIOS Information
++	Vendor: Microsoft Corporation
++	Version: Hyper-V UEFI Release v4.1
++	Release Date: 11/28/2023
++	ROM Size: 64 kB
++	Characteristics:
++		BIOS characteristics not supported
++		ACPI is supported
++		Targeted content distribution is supported
++		UEFI is supported
++		System is a virtual machine
++	BIOS Revision: 4.1
++
++Handle 0x0001, DMI type 1, 27 bytes
++System Information
++	Manufacturer: Microsoft Corporation
++	Product Name: Virtual Machine
++	Version: Hyper-V UEFI Release v4.1
++	Serial Number: 0000-0011-3798-4833-3781-8467-28
++	UUID: 9ded57c4-3ce3-4ac8-aaaf-2c4ccf6e7a59
++	Wake-up Type: Power Switch
++	SKU Number: None
++	Family: Virtual Machine
++
++Handle 0x0002, DMI type 3, 24 bytes
++Chassis Information
++	Manufacturer: Microsoft Corporation
++	Type: Desktop
++	Lock: Not Present
++	Version: Hyper-V UEFI Release v4.1
++	Serial Number: 6708-6940-4856-4751-7507-5546-20
++	Asset Tag: 7783-7084-3265-9085-8269-3286-77
++	Boot-up State: Safe
++	Power Supply State: Safe
++	Thermal State: Safe
++	Security Status: Unknown
++	OEM Information: 0x00000000
++	Height: Unspecified
++	Number Of Power Cords: Unspecified
++	Contained Elements: 0
++	SKU Number: Virtual Machine
++
++Handle 0x0003, DMI type 2, 17 bytes
++Base Board Information
++	Manufacturer: Microsoft Corporation
++	Product Name: Virtual Machine
++	Version: Hyper-V UEFI Release v4.1
++	Serial Number: 0000-0012-2990-9781-5781-3745-53
++	Asset Tag: None
++	Features:
++		Board is a hosting board
++	Location In Chassis: Virtual Machine
++	Chassis Handle: 0x0002
++	Type: Motherboard
++	Contained Object Handles: 0
++
++Handle 0x0004, DMI type 4, 48 bytes
++Processor Information
++	Socket Designation: None
++	Type: Central Processor
++	Family: ARMv8
++	Manufacturer: Ampere(R)
++	ID: 00 00 00 00 00 00 00 00
++	Version: Ampere(R) Altra(R) Processor
++	Voltage: 1.0 V
++	External Clock: 1650 MHz
++	Max Speed: 3000 MHz
++	Current Speed: 3000 MHz
++	Status: Populated, Enabled
++	Upgrade: None
++	L1 Cache Handle: Not Provided
++	L2 Cache Handle: Not Provided
++	L3 Cache Handle: Not Provided
++	Serial Number: None
++	Asset Tag: None
++	Part Number: None
++	Core Count: 2
++	Core Enabled: 2
++	Thread Count: 1
++	Characteristics:
++		64-bit capable
++		Multi-Core
++		Power/Performance Control
++		128-bit Capable
++		Arm64 SoC ID
++
++Handle 0x0005, DMI type 11, 5 bytes
++OEM Strings
++	String 1: [MS_VM_CERT/SHA1/9b80ca0d5dd061ec9da4e494f4c3fd1196270c22]
++	String 2: 00000000000000000000000000000000
++	String 3: To be filled by OEM
++
++Handle 0x0006, DMI type 16, 23 bytes
++Physical Memory Array
++	Location: System Board Or Motherboard
++	Use: System Memory
++	Error Correction Type: None
++	Maximum Capacity: 0 bytes
++	Error Information Handle: Not Provided
++	Number Of Devices: 2
++
++Handle 0x0007, DMI type 17, 92 bytes
++Memory Device
++	Array Handle: 0x0006
++	Error Information Handle: Not Provided
++	Total Width: Unknown
++	Data Width: Unknown
++	Size: 1 GB
++	Form Factor: Unknown
++	Set: None
++	Locator: M0001
++	Bank Locator: None
++	Type: Unknown
++	Type Detail: Unknown
++	Speed: Unknown
++	Manufacturer: Microsoft Corporation
++	Serial Number: None
++	Asset Tag: None
++	Part Number: None
++	Rank: Unknown
++	Configured Memory Speed: Unknown
++	Minimum Voltage: Unknown
++	Maximum Voltage: Unknown
++	Configured Voltage: Unknown
++	Memory Technology: <OUT OF SPEC>
++	Memory Operating Mode Capability: None
++	Firmware Version: Not Specified
++	Module Manufacturer ID: Unknown
++	Module Product ID: Unknown
++	Memory Subsystem Controller Manufacturer ID: Unknown
++	Memory Subsystem Controller Product ID: Unknown
++	Non-Volatile Size: None
++	Volatile Size: None
++	Cache Size: None
++	Logical Size: None
++
++Handle 0x0008, DMI type 19, 31 bytes
++Memory Array Mapped Address
++	Starting Address: 0x00000000000
++	Ending Address: 0x000400003FF
++	Range Size: 1 GB
++	Physical Array Handle: 0x0006
++	Partition Width: 0
++
++Handle 0x0009, DMI type 20, 35 bytes
++Memory Device Mapped Address
++	Starting Address: 0x00000000000
++	Ending Address: 0x000400003FF
++	Range Size: 1 GB
++	Physical Device Handle: 0x0007
++	Memory Array Mapped Address Handle: 0x0008
++	Partition Row Position: Unknown
++
++Handle 0x000A, DMI type 17, 92 bytes
++Memory Device
++	Array Handle: 0x0006
++	Error Information Handle: Not Provided
++	Total Width: Unknown
++	Data Width: Unknown
++	Size: 7 GB
++	Form Factor: Unknown
++	Set: None
++	Locator: M0002
++	Bank Locator: None
++	Type: Unknown
++	Type Detail: Unknown
++	Speed: Unknown
++	Manufacturer: Microsoft Corporation
++	Serial Number: None
++	Asset Tag: None
++	Part Number: None
++	Rank: Unknown
++	Configured Memory Speed: Unknown
++	Minimum Voltage: Unknown
++	Maximum Voltage: Unknown
++	Configured Voltage: Unknown
++	Memory Technology: <OUT OF SPEC>
++	Memory Operating Mode Capability: None
++	Firmware Version: Not Specified
++	Module Manufacturer ID: Unknown
++	Module Product ID: Unknown
++	Memory Subsystem Controller Manufacturer ID: Unknown
++	Memory Subsystem Controller Product ID: Unknown
++	Non-Volatile Size: None
++	Volatile Size: None
++	Cache Size: None
++	Logical Size: None
++
++Handle 0x000B, DMI type 19, 31 bytes
++Memory Array Mapped Address
++	Starting Address: 0x00100000000
++	Ending Address: 0x002C00003FF
++	Range Size: 7 GB
++	Physical Array Handle: 0x0006
++	Partition Width: 0
++
++Handle 0x000C, DMI type 20, 35 bytes
++Memory Device Mapped Address
++	Starting Address: 0x00100000000
++	Ending Address: 0x002C00003FF
++	Range Size: 7 GB
++	Physical Device Handle: 0x000A
++	Memory Array Mapped Address Handle: 0x000B
++	Partition Row Position: Unknown
++
++Handle 0x000D, DMI type 32, 11 bytes
++System Boot Information
++	Status: No errors detected
++
++Handle 0xFEFF, DMI type 127, 4 bytes
++End Of Table
++
++EOF
+diff --git a/tests/hyperv-arm/sbin/uname b/tests/hyperv-arm/sbin/uname
+new file mode 100755
+index 000000000..bd33a2d73
+--- /dev/null
++++ b/tests/hyperv-arm/sbin/uname
+@@ -0,0 +1,2 @@
++#!/bin/sh -
++echo aarch64
+diff --git a/tests/hyperv-arm/sbin/virt-what-cpuid-helper b/tests/hyperv-arm/sbin/virt-what-cpuid-helper
+new file mode 100755
+index 000000000..77a669235
+--- /dev/null
++++ b/tests/hyperv-arm/sbin/virt-what-cpuid-helper
+@@ -0,0 +1,2 @@
++#!/bin/sh -
++# nothing
+diff --git a/tests/hyperv-arm/test.sh b/tests/hyperv-arm/test.sh
+new file mode 100755
+index 000000000..50fca7431
+--- /dev/null
++++ b/tests/hyperv-arm/test.sh
+@@ -0,0 +1,32 @@
++# Test for Microsoft HyperV.
++# Copyright (C) 2008-2024 Red Hat Inc.
++#
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 2 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++
++output="$(PATH=../..:$PATH virt-what --test-root=. 2>&1)"
++expected="hyperv"
++
++if [ "$output" != "$expected" ]; then
++    echo "$0: test failed because output did not match expected"
++    echo "Expected output was:"
++    echo "----------------------------------------"
++    echo "$expected"
++    echo "----------------------------------------"
++    echo "But the actual output of the program was:"
++    echo "----------------------------------------"
++    echo "$output"
++    echo "----------------------------------------"
++    exit 1
++fi
+diff --git a/virt-what.in b/virt-what.in
+index 5c5b54b92..77b385f91 100644
+--- a/virt-what.in
++++ b/virt-what.in
+@@ -1,6 +1,6 @@
+ #!/bin/sh -
+ # @configure_input@
+-# Copyright (C) 2008-2022 Red Hat Inc.
++# Copyright (C) 2008-2024 Red Hat Inc.
+ #
+ # This program is free software; you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+@@ -136,14 +136,22 @@ fi
+ # http://blogs.msdn.com/b/sqlosteam/archive/2010/10/30/is-this-real-the-metaphysics-of-hardware-virtualization.aspx
+ if [ "$cpuid" = "Microsoft Hv" ]; then
+     echo hyperv
++# Hyper-V on ARM doesn't have CPUID.  Use the information in dmidecode
++# instead.  Note this is similar to VirtualPC below.
++elif echo "$dmi" | grep -q 'Manufacturer: Microsoft Corporation' &&
++     echo "$dmi" | grep -q 'Product Name: Virtual Machine' &&
++     echo "$dmi" | grep -q 'Version: Hyper-V'; then
++    echo hyperv
+ fi
+ 
+ # Check for VirtualPC.
+-# The negative check for cpuid is to distinguish this from Hyper-V
+-# which also has the same manufacturer string in the SM-BIOS data.
++# The negative check for cpuid & Hyper-V is to distinguish this from
++# Hyper-V above which also has the same manufacturer string in the
++# SM-BIOS data.
+ if [ "$cpuid" != "Microsoft Hv" ] &&
+     echo "$dmi" | grep -q 'Manufacturer: Microsoft Corporation' &&
+-    echo "$dmi" | grep -q 'Product Name: Virtual Machine'; then
++    echo "$dmi" | grep -q 'Product Name: Virtual Machine' &&
++    ! echo "$dmi" | grep -q 'Version: Hyper-V'; then
+     echo virtualpc
+ fi
+ 
+-- 
+2.43.0
+

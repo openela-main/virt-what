@@ -1,0 +1,77 @@
+From 0b4886bea5fce89f588a1ac3c885b6860bb2deed Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Daniel=20P=2E=20Berrang=C3=A9?= <berrange@redhat.com>
+Date: Thu, 29 Jun 2023 17:51:02 +0100
+Subject: [PATCH] virt-what-cvm: check if hypervisor bit is set
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Before doing any probes for a confidential VM, check that the
+tool is running under a hypervisor, rather than bare metal
+
+Signed-off-by: Daniel P. Berrangé <berrange@redhat.com>
+(cherry picked from commit 64718d09a504bd10c6ab973acc0779925482b62f)
+---
+ virt-what-cvm.c | 27 +++++++++++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+
+diff --git a/virt-what-cvm.c b/virt-what-cvm.c
+index 407efb492..f1847688b 100644
+--- a/virt-what-cvm.c
++++ b/virt-what-cvm.c
+@@ -35,6 +35,9 @@ static bool dodebug = false;
+ 
+ #define debug(...) do { if (dodebug) fprintf(stderr, __VA_ARGS__); } while(0)
+ 
++
++#define CPUID_PROCESSOR_INFO_AND_FEATURE_BITS 0x1
++
+ /*
+  * AMD64 Architecture Programmer’s Manual Volume 3:
+  * General-Purpose and System Instructions.
+@@ -72,6 +75,9 @@ static bool dodebug = false;
+ #define CPUID_SIG_INTEL     "GenuineIntel"
+ #define CPUID_SIG_INTEL_TDX "IntelTDX    "
+ 
++/* ecx bit 31: set => hyperpvisor, unset => bare metal */
++#define CPUID_FEATURE_HYPERVISOR (1 << 31)
++
+ /*
+  * This TPM NV data format is not explicitly documented anywhere,
+  * but the header definition is present in code at:
+@@ -335,11 +341,32 @@ cpu_sig_intel (void)
+     puts ("intel-tdx");
+ }
+ 
++static bool
++cpu_is_hv (void)
++{
++  uint32_t eax, ebx, ecx, edx;
++  bool is_hv;
++
++  eax = CPUID_PROCESSOR_INFO_AND_FEATURE_BITS;
++  ebx = ecx = edx = 0;
++
++  cpuid(&eax, &ebx, &ecx, &edx);
++
++  is_hv = ecx & CPUID_FEATURE_HYPERVISOR;
++
++  debug ("CPUID is hypervisor: %s\n", is_hv ? "yes" : "no");
++  return is_hv;
++}
++
+ static void
+ cpu_sig (void)
+ {
+   char sig[13];
+ 
++  /* Skip everything on bare metal */
++  if (!cpu_is_hv ())
++    return;
++
+   memset (sig, 0, sizeof sig);
+   cpuid_leaf (0, sig);
+ 
+-- 
+2.43.0
+

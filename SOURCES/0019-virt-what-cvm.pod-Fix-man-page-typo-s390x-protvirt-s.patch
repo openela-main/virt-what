@@ -1,0 +1,29 @@
+From 69e5ae90a5a95b38d765e110acf76b3fe3c2665a Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Tue, 13 Aug 2024 13:23:06 +0100
+Subject: [PATCH] virt-what-cvm.pod: Fix man page typo s390x-protvirt ->
+ s390-protvirt
+
+Reported-by: Yongkui Guo
+Fixes: commit 037689fbe95e403b050c1eb736ebc8fdc2e601a5
+(cherry picked from commit 963676c4dd4c2a9c070b76da6f8835ceb131dbe0)
+---
+ virt-what-cvm.pod | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/virt-what-cvm.pod b/virt-what-cvm.pod
+index 00e21cb70..a76717984 100644
+--- a/virt-what-cvm.pod
++++ b/virt-what-cvm.pod
+@@ -60,7 +60,7 @@ paired with B<amd-sev-snp>.
+ 
+ Status: tested on Microsoft Azure SEV-SNP & TDX CVM
+ 
+-=item B<s390x-protvirt>
++=item B<s390-protvirt>
+ 
+ This is a confidential guest running on s390x with the
+ Protected Virtualization (Secure Execution) technology
+-- 
+2.43.0
+

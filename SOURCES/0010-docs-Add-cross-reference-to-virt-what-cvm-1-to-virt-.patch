@@ -1,0 +1,25 @@
+From dbd90b1a4ceae884b06907da0b7964bcb8ff01d3 Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Tue, 30 May 2023 08:46:06 +0100
+Subject: [PATCH] docs: Add cross reference to virt-what-cvm(1) to virt-what(1)
+
+(cherry picked from commit 52c833c7c6ede0b7fcefa7ad225206f410407eda)
+---
+ virt-what.pod | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/virt-what.pod b/virt-what.pod
+index 45dd7c933..d60449d02 100644
+--- a/virt-what.pod
++++ b/virt-what.pod
+@@ -409,6 +409,7 @@ specific features your drivers need (eg. for the presence of PCI devices).
+ 
+ =head1 SEE ALSO
+ 
++L<virt-what-cvm(1)>,
+ L<http://people.redhat.com/~rjones/virt-what/>,
+ L<http://www.vmware.com/>,
+ L<http://www.microsoft.com/windows/products/winfamily/virtualpc>,
+-- 
+2.43.0
+

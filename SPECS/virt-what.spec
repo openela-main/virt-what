@@ -1,6 +1,6 @@
 Name:           virt-what
 Version:        1.25
-Release:        5%{?dist}
+Release:        10%{?dist}
 Summary:        Detect if we are running in a virtual machine
 License:        GPLv2+
 
@@ -11,7 +11,7 @@ Source0:        http://people.redhat.com/~rjones/virt-what/files/%{name}-%{versi
 Source1:       copy-patches.sh
 
 # Patches are maintained in the following repository:
-# http://git.annexia.org/?p=virt-what.git;a=shortlog;h=refs/heads/rhel-9.3
+# http://git.annexia.org/?p=virt-what.git;a=shortlog;h=refs/heads/rhel-9.5
 
 # Patches.
 Patch0001:     0001-Rearrange-lxc-test-to-avoid-use-of-cat.patch
@@ -21,6 +21,18 @@ Patch0004:     0004-Detect-OCI-containers.patch
 Patch0005:     0005-Add-support-for-Alibaba-cloud-on-aarch64.patch
 Patch0006:     0006-nutanix-Don-t-match-Nutanix-based-baremetal-systems.patch
 Patch0007:     0007-Add-support-for-CRI-O-containers.patch
+Patch0008:     0008-Fix-support-for-Hyper-V-on-Arm.patch
+Patch0009:     0009-Introduce-virt-what-cvm-program.patch
+Patch0010:     0010-docs-Add-cross-reference-to-virt-what-cvm-1-to-virt-.patch
+Patch0011:     0011-virt-what-cvm-check-if-hypervisor-bit-is-set.patch
+Patch0012:     0012-virt-what-cvm-support-alternative-cpuid-leaf-orderin.patch
+Patch0013:     0013-virt-what-cvm-probe-for-SNP-HCL-on-HyperV-Azure-via-.patch
+Patch0014:     0014-virt-what-cvm-drop-TPM-logic-for-detecting-SNP-on-Hy.patch
+Patch0015:     0015-virt-what-cvm-rename-azure-hcl-fact-to-hyperv-hcl.patch
+Patch0016:     0016-Add-virt-what-cvm.pod-to-EXTRA_DIST.patch
+Patch0017:     0017-Fix-CVM-detection-on-Azure-with-TDX.patch
+Patch0018:     0018-Add-support-for-detecting-protected-virtualization-o.patch
+Patch0019:     0019-virt-what-cvm.pod-Fix-man-page-typo-s390x-protvirt-s.patch
 
 BuildRequires:  make
 BuildRequires:  git
@@ -122,11 +134,24 @@ fi
 %files
 %doc README COPYING
 %{_sbindir}/virt-what
+%{_sbindir}/virt-what-cvm
 %{_libexecdir}/virt-what-cpuid-helper
 %{_mandir}/man1/*.1*
 
 
 %changelog
+* Tue Aug 13 2024 Richard W.M. Jones <rjones@redhat.com> - 1.25-10
+- Implement virt-what-cvm for s390x
+  related: RHEL-50659
+
+* Tue Jul 30 2024 Richard W.M. Jones <rjones@redhat.com> - 1.25-8
+- Add virt-what-cvm tool
+  resolves: RHEL-50659
+
+* Tue Jul 02 2024 Richard W.M. Jones <rjones@redhat.com> - 1.25-6
+- Add support for Azure VMs on ARM
+  resolves: RHEL-45834
+
 * Wed Jun 28 2023 Richard W.M. Jones <rjones@redhat.com> - 1.25-5
 - Add support for CRI-O containers
   resolves: rhbz#2218203

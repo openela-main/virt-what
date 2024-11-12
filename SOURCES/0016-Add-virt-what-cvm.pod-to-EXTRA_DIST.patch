@@ -1,0 +1,26 @@
+From c8daee800cbe22e622306f78a71188ec5639d4a1 Mon Sep 17 00:00:00 2001
+From: "Richard W.M. Jones" <rjones@redhat.com>
+Date: Fri, 26 Jul 2024 16:05:12 +0100
+Subject: [PATCH] Add virt-what-cvm.pod to EXTRA_DIST
+
+(Single hunk cherry pick from commit 6d1455766b)
+---
+ Makefile.am | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index b68540f39..ba5185741 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -19,7 +19,7 @@ AM_CPPFLAGS = -Wall
+ 
+ CLEANFILES = virt-what *~
+ 
+-EXTRA_DIST = .gitignore virt-what.in virt-what.pod
++EXTRA_DIST = .gitignore virt-what.in virt-what.pod virt-what-cvm.pod
+ 
+ SUBDIRS = . tests
+ 
+-- 
+2.43.0
+
