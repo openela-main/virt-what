@@ -1,47 +1,30 @@
 Name:           virt-what
-Version:        1.25
-Release:        10%{?dist}
+Version:        1.27
+Release:        1%{?dist}
 Summary:        Detect if we are running in a virtual machine
-License:        GPLv2+
+License:        GPL-2.0-or-later
 
 URL:            http://people.redhat.com/~rjones/virt-what/
 Source0:        http://people.redhat.com/~rjones/virt-what/files/%{name}-%{version}.tar.gz
+Source1:        http://people.redhat.com/~rjones/virt-what/files/%{name}-%{version}.tar.gz.sig
+
+# Keyring used to verify tarball signature.
+Source2:       libguestfs.keyring
 
 # Maintainer script which helps with handling patches.
-Source1:       copy-patches.sh
+Source3:        copy-patches.sh
 
 # Patches are maintained in the following repository:
-# http://git.annexia.org/?p=virt-what.git;a=shortlog;h=refs/heads/rhel-9.5
+# http://git.annexia.org/?p=virt-what.git;a=shortlog;h=refs/heads/rhel-9.6
 
-# Patches.
-Patch0001:     0001-Rearrange-lxc-test-to-avoid-use-of-cat.patch
-Patch0002:     0002-Move-docker-and-podman-tests-up-add-comments.patch
-Patch0003:     0003-podman-Fix-location-of-test-file-proc-1-environ.patch
-Patch0004:     0004-Detect-OCI-containers.patch
-Patch0005:     0005-Add-support-for-Alibaba-cloud-on-aarch64.patch
-Patch0006:     0006-nutanix-Don-t-match-Nutanix-based-baremetal-systems.patch
-Patch0007:     0007-Add-support-for-CRI-O-containers.patch
-Patch0008:     0008-Fix-support-for-Hyper-V-on-Arm.patch
-Patch0009:     0009-Introduce-virt-what-cvm-program.patch
-Patch0010:     0010-docs-Add-cross-reference-to-virt-what-cvm-1-to-virt-.patch
-Patch0011:     0011-virt-what-cvm-check-if-hypervisor-bit-is-set.patch
-Patch0012:     0012-virt-what-cvm-support-alternative-cpuid-leaf-orderin.patch
-Patch0013:     0013-virt-what-cvm-probe-for-SNP-HCL-on-HyperV-Azure-via-.patch
-Patch0014:     0014-virt-what-cvm-drop-TPM-logic-for-detecting-SNP-on-Hy.patch
-Patch0015:     0015-virt-what-cvm-rename-azure-hcl-fact-to-hyperv-hcl.patch
-Patch0016:     0016-Add-virt-what-cvm.pod-to-EXTRA_DIST.patch
-Patch0017:     0017-Fix-CVM-detection-on-Azure-with-TDX.patch
-Patch0018:     0018-Add-support-for-detecting-protected-virtualization-o.patch
-Patch0019:     0019-virt-what-cvm.pod-Fix-man-page-typo-s390x-protvirt-s.patch
-
+BuildRequires:  gcc
 BuildRequires:  make
 BuildRequires:  git
 BuildRequires:  autoconf, automake, libtool
-
-# This is provided by the build root, but we make it explicit
-# anyway in case this was dropped from the build root in future.
-BuildRequires:  gcc
 BuildRequires:  /usr/bin/pod2man
+
+# Required to verify tarball signature.
+BuildRequires: gnupg2
 
 # Required at build time in order to do 'make check' (for getopt).
 BuildRequires:  util-linux
@@ -110,6 +93,7 @@ Current types of virtualization detected:
 
 
 %prep
+%{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data='%{SOURCE0}'
 %autosetup -S git
 
 # Always rebuild upstream autotools files.
@@ -140,6 +124,10 @@ fi
 
 
 %changelog
+* Mon Sep 02 2024 Richard W.M. Jones <rjones@redhat.com> - 1.27-1
+- Rebase to Fedora Rawhide
+  resolves: RHEL-56807
+
 * Tue Aug 13 2024 Richard W.M. Jones <rjones@redhat.com> - 1.25-10
 - Implement virt-what-cvm for s390x
   related: RHEL-50659
