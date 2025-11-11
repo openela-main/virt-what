@@ -1,6 +1,6 @@
 Name:           virt-what
 Version:        1.27
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Detect if we are running in a virtual machine
 License:        GPL-2.0-or-later
 
@@ -14,8 +14,10 @@ Source2:       libguestfs.keyring
 # Maintainer script which helps with handling patches.
 Source3:        copy-patches.sh
 
-# Patches are maintained in the following repository:
-# http://git.annexia.org/?p=virt-what.git;a=shortlog;h=refs/heads/rhel-9.6
+# Add detection of systemd-nspawn (upstream)
+Patch:          0001-virt-what-detect-systemd-nspawn.patch
+# Add detection of WSL2 (upstream)
+Patch:          0002-Add-support-for-WSL2.patch
 
 BuildRequires:  gcc
 BuildRequires:  make
@@ -124,6 +126,11 @@ fi
 
 
 %changelog
+* Tue May 06 2025 Richard W.M. Jones <rjones@redhat.com> - 1.27-2
+- Rebase to Fedora Rawhide
+- Enable virt-what to detect WSL2
+  resolves: RHEL-89793
+
 * Mon Sep 02 2024 Richard W.M. Jones <rjones@redhat.com> - 1.27-1
 - Rebase to Fedora Rawhide
   resolves: RHEL-56807
